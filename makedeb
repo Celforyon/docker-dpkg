@@ -1,0 +1,48 @@
+#!/bin/bash
+
+debdir=build/deb
+in=debfiles
+[ $# -eq 1 ] && in=$1
+if [ ! -r $in ]; then
+	echo>&2 error: $in not found
+	exit 1
+fi
+
+cd $(dirname $in)
+in=$(basename $in)
+while read line; do
+	install -D $(echo $line|tr ':' ' ')
+done<$in
+
+size=$(du -s $debdir|tr '\t' ' '|cut -d' ' -f1)
+sums=$(find $debdir -type f -exec md5sum {} \;)
+version=$(cat DEBIAN/control|grep "Version: "|cut -d' ' -f2)
+
+DEBIAN_DIR=
+if [ -d "${DIST}/${ARCH}/DEBIAN" ]; then
+	DEBIAN_DIR="${DIST}/${ARCH}/DEBIAN"
+else
+	if [ -d "${DIST}/DEBIAN" ]; then
+		DEBIAN_DIR="${DIST}/DEBIAN"
+	else
+		if [ -d "DEBIAN" ]; then
+			DEBIAN_DIR="DEBIAN"
+		fi
+	fi
+fi
+
+if [ -z "$DEBIAN_DIR" ]; then
+	echo>&2 error: no DEBIAN directory
+	exit 2
+fi
+
+cp -rf $DEBIAN_DIR $debdir
+sed -ri \
+	-e "s/Architecture:.*/Architecture: $ARCH/" \
+	-e "s/Installed-Size:.*/Installed-Size: $size/" \
+	$debdir/DEBIAN/control
+echo>$debdir/DEBIAN/md5sums "$sums"
+
+dest=$(mktemp -dp /shared)/$DIST
+mkdir $dest
+dpkg-deb -b $debdir $dest/${CI_PROJECT_NAME}_${version}_${DIST}_${ARCH}.deb
