@@ -3,16 +3,18 @@
 debdir=build/deb
 in=debfiles
 [ $# -eq 1 ] && in=$1
-if [ ! -r $in ]; then
-	echo>&2 error: $in not found
-	exit 1
-fi
 
-cd $(dirname $in)
-in=$(basename $in)
-while read line; do
-	install -D $(echo $line|tr ':' ' ')
-done<$in
+[ ! -d $debdir ] && mkdir -p $debdir
+
+if [ -r $in ]; then
+	cd $(dirname $in)
+	in=$(basename $in)
+	while read line; do
+		install -D $(echo $line|tr ':' ' ')
+	done<$in
+else
+	echo warning: $in not found
+fi
 
 size=$(du -s $debdir|tr '\t' ' '|cut -d' ' -f1)
 sums=$(find $debdir -type f -exec md5sum {} \;)
