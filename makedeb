@@ -16,10 +16,6 @@ else
 	echo warning: $in not found
 fi
 
-size=$(du -s $debdir|tr '\t' ' '|cut -d' ' -f1)
-sums=$(find $debdir -type f -exec md5sum {} \;)
-version=$(cat DEBIAN/control|grep "Version: "|cut -d' ' -f2)
-
 DEBIAN_DIR=
 if [ -d "${DIST}/${ARCH}/DEBIAN" ]; then
 	DEBIAN_DIR="${DIST}/${ARCH}/DEBIAN"
@@ -37,6 +33,10 @@ if [ -z "$DEBIAN_DIR" ]; then
 	echo>&2 error: no DEBIAN directory
 	exit 2
 fi
+
+size=$(du -s $debdir|tr '\t' ' '|cut -d' ' -f1)
+sums=$(find $debdir -type f -exec md5sum {} \;)
+version=$(cat ${DEBIAN_DIR}/control|grep "Version: "|cut -d' ' -f2)
 
 cp -rf $DEBIAN_DIR $debdir
 sed -ri \
