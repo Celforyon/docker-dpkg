@@ -1,50 +1,66 @@
 #!/bin/bash
 
-debdir=build/deb
-in=debfiles
-[ $# -eq 1 ] && in=$1
+die() {
+	errcode=$1
+	shift
+	echo>&2 "[fatal error] $*"
+	exit "${errcode}"
+}
 
-[ ! -d $debdir ] && mkdir -p $debdir
+gwd=$(pwd)
+deploy_dir=${DEPLOY_DIR:-deploy}
+root_dir=${deploy_dir}/${PKG_ROOTDIR:-root_dir}
+install_file=${deploy_dir}/${INSTALL_FILE:-install}
+project_name=${PROJECT_NAME:-${CI_PROJECT_NAME}}
 
-if [ -r $in ]; then
-	cd $(dirname $in)
-	in=$(basename $in)
-	while read line; do
-		install -D $(echo $line|tr ':' ' ')
-	done<$in
+[ -z "${project_name}" ] && die 1 'missing project name (env CI_PROJECT_NAME or PROJECT_NAME)'
+
+[ ! -d "${root_dir}" ] && mkdir -p "${root_dir}"
+
+if [ -r "${install_file}" ]; then
+	install_file_dir=$(dirname "${install_file}")
+	install_file_basename=$(basename "${install_file}")
+	cd "${install_file_dir}" || die 3 "cd ${install_file_dir} failed"
+	while read -r line; do
+		from=$(echo "${line}"|cut -d':' -f1)
+		to=$(echo "${line}"|cut -d':' -f2)
+
+		if [ -n "${from}" ] && [ -n "${to}" ]; then
+			from_fc=$(echo "${from}"|cut -c1)
+			[ "${from_fc}" != "/" ] && from=${gwd}/${from}
+			install -D "${from}" "${root_dir}/${to}"
+		fi
+	done<"${install_file_basename}"
 else
-	echo warning: $in not found
+	echo "[info] ${install_file} not found (env INSTALL_FILE)"
 fi
 
 DEBIAN_DIR=
-if [ -d "${DIST}/${ARCH}/DEBIAN" ]; then
-	DEBIAN_DIR="${DIST}/${ARCH}/DEBIAN"
+if [ -d "${deploy_dir}/${DIST}/${ARCH}/DEBIAN" ]; then
+	DEBIAN_DIR="${deploy_dir}/${DIST}/${ARCH}/DEBIAN"
 else
-	if [ -d "${DIST}/DEBIAN" ]; then
-		DEBIAN_DIR="${DIST}/DEBIAN"
+	if [ -d "${deploy_dir}/${DIST}/DEBIAN" ]; then
+		DEBIAN_DIR="${deploy_dir}/${DIST}/DEBIAN"
 	else
-		if [ -d "DEBIAN" ]; then
-			DEBIAN_DIR="DEBIAN"
+		if [ -d "${deploy_dir}/DEBIAN" ]; then
+			DEBIAN_DIR="${deploy_dir}/DEBIAN"
 		fi
 	fi
 fi
 
-if [ -z "$DEBIAN_DIR" ]; then
-	echo>&2 error: no DEBIAN directory
-	exit 2
-fi
+[ -z "${DEBIAN_DIR}" ] && die 2 'no DEBIAN directory'
 
-size=$(du -s $debdir|tr '\t' ' '|cut -d' ' -f1)
-sums=$(find $debdir -type f -exec md5sum {} \;)
-version=$(cat ${DEBIAN_DIR}/control|grep "Version: "|cut -d' ' -f2)
+size=$(du -s "${root_dir}"|tr '\t' ' '|cut -d' ' -f1)
+sums=$(find "${root_dir}" -type f -exec md5sum {} \;)
+version=$(grep -E "^Version: " "${DEBIAN_DIR}/control"|cut -d' ' -f2)
 
-cp -rf $DEBIAN_DIR $debdir
+cp -rf "${DEBIAN_DIR}" "${root_dir}"
 sed -ri \
 	-e "s/Architecture:.*/Architecture: $ARCH/" \
 	-e "s/Installed-Size:.*/Installed-Size: $size/" \
-	$debdir/DEBIAN/control
-echo>$debdir/DEBIAN/md5sums "$sums"
+	"${root_dir}/DEBIAN/control"
+echo>"${root_dir}/DEBIAN/md5sums" "$sums"
 
-dest=$(mktemp -dp /shared)/$DIST
-mkdir $dest
-dpkg-deb -b $debdir $dest/${CI_PROJECT_NAME}_${version}_${DIST}_${ARCH}.deb
+dest_dir=$(mktemp -dp /shared)/${DIST}
+mkdir "${dest_dir}"
+dpkg-deb -b "${root_dir}" "${dest_dir}/${CI_PROJECT_NAME}_${version}_${DIST}_${ARCH}.deb"
