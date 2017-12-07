@@ -15,6 +15,7 @@ Contains a `makedeb` script to generate Debian packages from a specific architec
 - `PKG_ROOTDIR`: the package root directory (full path will be `${DEPLOY_DIR}/${PKG_ROOTDIR}`), defaults to `root_dir`
 - `INSTALL_FILE`: the "install" file (see below) (full path will be `${DEPLOY_DIR}/${INSTALL_FILE}`), defaults to `install`
 - `VERBOSE`: outputs more information if set to "1"
+- `IGNORE_CHECKS`: set to "1" if you want failed checks to be ignored
 
 ## root\_dir
 This is the project's root directory, which will be used to build the `.deb` file using `dpkg-deb`

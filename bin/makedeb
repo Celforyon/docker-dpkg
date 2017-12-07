@@ -4,6 +4,7 @@
 E_MISSING_ARGUMENT=1
 E_COMMAND_FAIL=2
 E_MISSING_FILE=3
+E_CHECK_FAIL=4
 
 # Functions
 die() {
@@ -97,7 +98,7 @@ fi
 
 # Debian package generation
 size=$(du -sx --exclude DEBIAN "${root_dir}"|tr '\t' ' '|cut -d' ' -f1)
-sums=$(find "${root_dir}" -type f -exec md5sum {} \;)
+sums=$(generate_md5sums "${root_dir}" || die "${E_COMMAND_FAIL}" "generate_md5sums '${root_dir}'")
 version=$(grep -E "^Version: " "${DEBIAN_DIR}/control"|cut -d' ' -f2)
 
 log_info "version: ${version}"
@@ -116,6 +117,14 @@ tmp_dest_dir=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
 tmp_dest_deb_file="${tmp_dest_dir}/${deb_file}"
 fakeroot dpkg-deb -b "${root_dir}" "${tmp_dest_deb_file}" || die "${E_COMMAND_FAIL}" "fakeroot dpkg-deb -b '${root_dir}' '${tmp_dest_deb_file}'"
 log_info "debian package generated: ${tmp_dest_deb_file}"
+
+# Check debian package
+lintian "${tmp_dest_deb_file}"
+lintian_ok=$?
+
+if [ "${IGNORE_CHECKS}" != "1" ]; then
+	[ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
+fi
 
 # Copy to /shared folder
 dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${distribution}

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Error values
+E_COMMAND_FAIL=2
+
+#
+root_dir=$1
+
+cd "${root_dir}" || die "${E_COMMAND_FAIL}" "cd '${root_dir}'"
+files=$(find ! -path './DEBIAN' ! -path './DEBIAN/*' -type f)
+
+for file in ${files}; do
+	md5sum "${file}"
+done

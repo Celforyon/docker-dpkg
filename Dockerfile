@@ -6,13 +6,13 @@ LABEL description="dpkg"
 
 RUN apt update && \
 	apt install --no-install-recommends --no-install-suggests -y \
-	fakeroot sudo && \
+	fakeroot lintian piuparts sudo && \
 	rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /shared
 
-COPY bin/* /usr/local/bin
-COPY sudoers.d/* /etc/sudoers.d
+COPY bin/* /usr/local/bin/
+COPY sudoers.d/* /etc/sudoers.d/
 
 RUN useradd -ms /bin/bash packager
 USER packager
