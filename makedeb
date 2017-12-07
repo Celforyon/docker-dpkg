@@ -8,7 +8,7 @@ die() {
 }
 
 gwd=$(pwd)
-deploy_dir=${DEPLOY_DIR:-deploy}
+deploy_dir=${gwd}/${DEPLOY_DIR:-deploy}
 root_dir=${deploy_dir}/${PKG_ROOTDIR:-root_dir}
 install_file=${deploy_dir}/${INSTALL_FILE:-install}
 project_name=${PROJECT_NAME:-${CI_PROJECT_NAME}}
@@ -18,10 +18,14 @@ project_name=${PROJECT_NAME:-${CI_PROJECT_NAME}}
 [ ! -d "${root_dir}" ] && mkdir -p "${root_dir}"
 
 if [ -r "${install_file}" ]; then
+	echo "[info] using install file: '${install_file}'"
 	install_file_dir=$(dirname "${install_file}")
 	install_file_basename=$(basename "${install_file}")
 	cd "${install_file_dir}" || die 3 "cd ${install_file_dir} failed"
+
+	i=0
 	while read -r line; do
+		i=$((i+1))
 		from=$(echo "${line}"|cut -d':' -f1)
 		to=$(echo "${line}"|cut -d':' -f2)
 
@@ -29,6 +33,10 @@ if [ -r "${install_file}" ]; then
 			from_fc=$(echo "${from}"|cut -c1)
 			[ "${from_fc}" != "/" ] && from=${gwd}/${from}
 			install -D "${from}" "${root_dir}/${to}"
+			echo "[info] installed '${from}' > '${to}'"
+		else
+			[ -z "${from}" ] && echo>&2 "[error] ${install_file}:${i}: source file empty"
+			[ -z "${to}" ] && echo>&2 "[error] ${install_file}:${i}: dest file empty"
 		fi
 	done<"${install_file_basename}"
 else
@@ -39,20 +47,28 @@ DEBIAN_DIR=
 if [ -d "${deploy_dir}/${DIST}/${ARCH}/DEBIAN" ]; then
 	DEBIAN_DIR="${deploy_dir}/${DIST}/${ARCH}/DEBIAN"
 else
+	echo "[info] no ${deploy_dir}/${DIST}/${ARCH}/DEBIAN"
 	if [ -d "${deploy_dir}/${DIST}/DEBIAN" ]; then
 		DEBIAN_DIR="${deploy_dir}/${DIST}/DEBIAN"
 	else
+		echo "[info] no ${deploy_dir}/${DIST}/DEBIAN"
 		if [ -d "${deploy_dir}/DEBIAN" ]; then
 			DEBIAN_DIR="${deploy_dir}/DEBIAN"
+		else
+			echo "[info] no ${deploy_dir}/DEBIAN"
 		fi
 	fi
 fi
 
 [ -z "${DEBIAN_DIR}" ] && die 2 'no DEBIAN directory'
+echo "[info] DEBIAN directory found at: ${DEBIAN_DIR}"
 
-size=$(du -s "${root_dir}"|tr '\t' ' '|cut -d' ' -f1)
+size=$(du -sx --exclude DEBIAN "${root_dir}"|tr '\t' ' '|cut -d' ' -f1)
 sums=$(find "${root_dir}" -type f -exec md5sum {} \;)
 version=$(grep -E "^Version: " "${DEBIAN_DIR}/control"|cut -d' ' -f2)
+
+echo "[info] version: ${version}"
+echo "[info] size: ${size}kB"
 
 cp -rf "${DEBIAN_DIR}" "${root_dir}"
 sed -ri \
@@ -63,4 +79,8 @@ echo>"${root_dir}/DEBIAN/md5sums" "$sums"
 
 dest_dir=$(mktemp -dp /shared)/${DIST}
 mkdir "${dest_dir}"
-dpkg-deb -b "${root_dir}" "${dest_dir}/${CI_PROJECT_NAME}_${version}_${DIST}_${ARCH}.deb"
+
+dest_deb_file="${dest_dir}/${CI_PROJECT_NAME}_${version}_${DIST}_${ARCH}.deb"
+dpkg-deb -b "${root_dir}" "${dest_deb_file}"
+
+echo "[info] debian package generated: ${dest_deb_file}"

@@ -17,8 +17,8 @@ This is the project's root directory, which will be used to build the `.deb` fil
 
 ## install file
 Each line of this file is read as:
-`from:to`
-where `from` is the current file location (if relative, from the `makedeb` working directory, which is Git's root directory when running in GitLab CI) and `to` is the *relative* destination path, from the package root directory
+`source:destination`
+where `source` is the current file location (if relative, from the `makedeb` working directory, which is Git's root directory when running in GitLab CI) and `destination` is the *relative* destination path, from the package root directory
 
 ## output
 the output will be into `/shared/$(mktemp -d)/${CI_PROJECT_NAME}\_${version}\_${DIST}\_${ARCH}.deb`
