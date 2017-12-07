@@ -1,0 +1,3 @@
+packager ALL=(root) NOPASSWD:/bin/cp
+packager ALL=(root) NOPASSWD:/bin/mkdir
+packager ALL=(root) NOPASSWD:/bin/mktemp

@@ -5,12 +5,16 @@ Docker image with dpkg utilities to make Debian packages
 Contains a `makedeb` script to generate Debian packages from a specific architecture:
 
 ## environment variables
+### Required
+- `DIST`: the distribution codename (jessie, stretch, ...)
+- `ARCH`: the architecture (amd64, i386, ...)
+
+### Optional
+- `PROJECT_NAME`: the project name, defaults to `${CI_PROJECT_NAME}` (defined by GitLab CI)
 - `DEPLOY_DIR`: the deploy directory, defaults to `deploy`
 - `PKG_ROOTDIR`: the package root directory (full path will be `${DEPLOY_DIR}/${PKG_ROOTDIR}`), defaults to `root_dir`
 - `INSTALL_FILE`: the "install" file (see below) (full path will be `${DEPLOY_DIR}/${INSTALL_FILE}`), defaults to `install`
-- `PROJECT_NAME`: the project name, defaults to `${CI_PROJECT_NAME}` (defined by GitLab CI)
-- `DIST`: the distribution codename (jessie, stretch, ...)
-- `ARCH`: the architecture (amd64, i386, ...)
+- `VERBOSE`: outputs more information if set to "1"
 
 ## root\_dir
 This is the project's root directory, which will be used to build the `.deb` file using `dpkg-deb`
