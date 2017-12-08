@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#===== Globals
 # Error values
 E_MISSING_ARGUMENT=1
 E_COMMAND_FAIL=2
@@ -118,14 +119,33 @@ tmp_dest_deb_file="${tmp_dest_dir}/${deb_file}"
 fakeroot dpkg-deb -b "${root_dir}" "${tmp_dest_deb_file}" || die "${E_COMMAND_FAIL}" "fakeroot dpkg-deb -b '${root_dir}' '${tmp_dest_deb_file}'"
 log_info "debian package generated: ${tmp_dest_deb_file}"
 
+#===== Checks
 # Check debian package
 lintian "${tmp_dest_deb_file}"
 lintian_ok=$?
 
+# Check scripts
+chk_tmp=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
+chk_tmp_deb_file=${chk_tmp}/${deb_file}
+cp "${tmp_dest_deb_file}" "${chk_tmp_deb_file}" || die "${E_COMMAND_FAIL}" "cp '${tmp_dest_deb_file}' '${chk_tmp_deb_file}'"
+pushd "${chk_tmp}"
+
+dpkg -x "${deb_file}" out
+dpkg -e "${deb_file}" out/DEBIAN
+
+allshellcheck out
+shellcheck_ok=$?
+
+popd
+rm -rf "${chk_tmp}"
+
+# Check failure?
 if [ "${IGNORE_CHECKS}" != "1" ]; then
 	[ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
+	[ "${shellcheck_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: shellcheck"
 fi
 
+#===== Deploy
 # Copy to /shared folder
 dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${distribution}
 dest_deb_file="${dest_dir}/${deb_file}"

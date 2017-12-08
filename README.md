@@ -1,8 +1,8 @@
-# Brief
+## Brief
 Docker image with dpkg utilities to make Debian packages
 
-# makedeb
-Contains a `makedeb` script to generate Debian packages from a specific architecture:
+## makedeb
+Contains a `makedeb` script to generate Debian packages from a specific architecture
 
 ## environment variables
 ### Required
@@ -16,6 +16,7 @@ Contains a `makedeb` script to generate Debian packages from a specific architec
 - `INSTALL_FILE`: the "install" file (see below) (full path will be `${DEPLOY_DIR}/${INSTALL_FILE}`), defaults to `install`
 - `VERBOSE`: outputs more information if set to "1"
 - `IGNORE_CHECKS`: set to "1" if you want failed checks to be ignored
+- `SHELLCHECK_EXCLUDE_CODES`: set to a comma separated list of `shellcheck` codes (e.g.: SC1009,SC2086) to ignore in shellcheck reporting. See `man shellcheck`
 
 ## root\_dir
 This is the project's root directory, which will be used to build the `.deb` file using `dpkg-deb`
@@ -27,3 +28,11 @@ where `source` is the current file location (if relative, from the `makedeb` wor
 
 ## output
 the output will be into `/shared/$(mktemp -d)/${CI_PROJECT_NAME}\_${version}\_${DIST}\_${ARCH}.deb`
+
+## Steps of makedeb
+- check input variables (env)
+- find `DEBIAN` directory
+- process install file
+- generate debian package
+- run some checks (lintian, shellcheck)
+- deploy into `/shared`

@@ -6,7 +6,7 @@ LABEL description="dpkg"
 
 RUN apt update && \
 	apt install --no-install-recommends --no-install-suggests -y \
-	fakeroot lintian piuparts sudo && \
+	fakeroot lintian shellcheck sudo && \
 	rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /shared
