@@ -15,6 +15,5 @@ COPY bin/* /usr/local/bin/
 COPY sudoers.d/* /etc/sudoers.d/
 
 RUN useradd -ms /bin/bash packager
-USER packager
 
 VOLUME ["/shared"]

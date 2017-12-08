@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Error values
+E_MISSING_ARGUMENT=1
+E_COMMAND_FAIL=2
+E_MISSING_FILE=3
+E_CHECK_FAIL=4
+
+# Functions
+die() {
+	errcode=$1
+	shift
+	echo>&2 "[fatal error] $*"
+	exit "${errcode}"
+}
+
+log_info() {
+	[ "${VERBOSE}" = "1" ] && echo "[info] $*"
+}
+
+log_error() {
+	echo>&2 "[error] $*"
+}
+
+# Variables
+gwd=$(pwd)
+deploy_dir=${gwd}/${DEPLOY_DIR:-deploy}
+root_dir=${deploy_dir}/${PKG_ROOTDIR:-root_dir}
+install_file=${deploy_dir}/${INSTALL_FILE:-install}
+
+project_name=${PROJECT_NAME:-${CI_PROJECT_NAME}}
+distribution=${DIST}
+architecture=${ARCH}
+
+# Required variables checks
+[ -z "${project_name}" ] && die "${E_MISSING_ARGUMENT}" 'missing project name (env CI_PROJECT_NAME or PROJECT_NAME)'
+[ -z "${distribution}" ] && die "${E_MISSING_ARGUMENT}" 'missing distribution codename (env DIST)'
+[ -z "${architecture}" ] && die "${E_MISSING_ARGUMENT}" 'missing architecture (env ARCH)'
+
+#===== Begin
+log_info "working directory: ${gwd}"
+
+[ ! -d "${root_dir}" ] && (mkdir -p "${root_dir}" || die "${E_COMMAND_FAIL}" "mkdir -p '${root_dir}'")
+
+# Find DEBIAN
+DEBIAN_DIR=
+if [ -d "${deploy_dir}/${distribution}/${architecture}/DEBIAN" ]; then
+	DEBIAN_DIR="${deploy_dir}/${distribution}/${architecture}/DEBIAN"
+else
+	log_info "no ${deploy_dir}/${distribution}/${architecture}/DEBIAN"
+	if [ -d "${deploy_dir}/${distribution}/DEBIAN" ]; then
+		DEBIAN_DIR="${deploy_dir}/${distribution}/DEBIAN"
+	else
+		log_info "no ${deploy_dir}/${distribution}/DEBIAN"
+		if [ -d "${deploy_dir}/DEBIAN" ]; then
+			DEBIAN_DIR="${deploy_dir}/DEBIAN"
+		else
+			log_info "no ${deploy_dir}/DEBIAN"
+		fi
+	fi
+fi
+
+[ -z "${DEBIAN_DIR}" ] && die "${E_MISSING_FILE}" 'DEBIAN directory not found'
+log_info "DEBIAN directory found at: ${DEBIAN_DIR}"
+
+# Process install file
+if [ -r "${install_file}" ]; then
+	log_info "using install file: '${install_file}'"
+	install_file_dir=$(dirname "${install_file}")
+	install_file_basename=$(basename "${install_file}")
+	cd "${install_file_dir}" || die "${E_COMMAND_FAIL}" "cd ${install_file_dir} failed"
+
+	i=0
+	while read -r line; do
+		i=$((i+1))
+		from=$(echo "${line}"|cut -d':' -f1)
+		to=$(echo "${line}"|cut -d':' -f2)
+
+		if [ -n "${from}" ] && [ -n "${to}" ]; then
+			from_fc=$(echo "${from}"|cut -c1)
+			[ "${from_fc}" != "/" ] && from=${gwd}/${from}
+
+			to_fc=$(echo "${to}"|cut -c1)
+			[ "${to_fc}" != "/" ] && to=${root_dir}/${to} || to=${root_dir}${to}
+
+			to_dir=$(dirname "${to}")
+			[ -d "${to_dir}" ] || (mkdir -p "${to_dir}" || die "${E_COMMAND_FAIL}" "mkdir -p ${to_dir}")
+			cp -a "${from}" "${to}" || die "${E_COMMAND_FAIL}" "cp -a '${from}' '${to}'"
+			log_info "installed '${from}' > '${to}'"
+		else
+			[ -z "${from}" ] && log_error "${install_file}:${i}: source file empty"
+			[ -z "${to}" ] && log_error "${install_file}:${i}: destination file empty"
+		fi
+	done<"${install_file_basename}"
+else
+	log_info "${install_file} not found (env INSTALL_FILE)"
+fi
+
+# Debian package generation
+size=$(du -sx --exclude DEBIAN "${root_dir}"|tr '\t' ' '|cut -d' ' -f1)
+sums=$(generate_md5sums "${root_dir}" || die "${E_COMMAND_FAIL}" "generate_md5sums '${root_dir}'")
+version=$(grep -E "^Version: " "${DEBIAN_DIR}/control"|cut -d' ' -f2)
+
+log_info "version: ${version}"
+log_info "size: ${size}kB"
+
+cp -rf "${DEBIAN_DIR}" "${root_dir}"
+sed -ri \
+	-e "s/Architecture:.*/Architecture: ${architecture}/" \
+	-e "s/Installed-Size:.*/Installed-Size: ${size}/" \
+	"${root_dir}/DEBIAN/control"
+echo>"${root_dir}/DEBIAN/md5sums" "$sums"
+
+deb_file="${project_name}_${version}_${distribution}_${architecture}.deb"
+
+tmp_dest_dir=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
+tmp_dest_deb_file="${tmp_dest_dir}/${deb_file}"
+fakeroot dpkg-deb -b "${root_dir}" "${tmp_dest_deb_file}" || die "${E_COMMAND_FAIL}" "fakeroot dpkg-deb -b '${root_dir}' '${tmp_dest_deb_file}'"
+log_info "debian package generated: ${tmp_dest_deb_file}"
+
+# Check debian package
+lintian "${tmp_dest_deb_file}"
+lintian_ok=$?
+
+if [ "${IGNORE_CHECKS}" != "1" ]; then
+	[ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
+fi
+
+# Copy to /shared folder
+dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${distribution}
+dest_deb_file="${dest_dir}/${deb_file}"
+sudo mkdir "${dest_dir}" || die "${E_COMMAND_FAIL}" "sudo mkdir '${dest_dir}'"
+sudo cp "${tmp_dest_deb_file}" "${dest_deb_file}" || die "${E_COMMAND_FAIL}" "sudo cp '${tmp_dest_deb_file}' '${dest_deb_file}'"
+log_info "debian package copied to: ${dest_deb_file}"
+
+exit 0
