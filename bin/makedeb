@@ -2,4 +2,4 @@
 
 chown -R packager: .
 find ! -path './.git' ! -path './.git/*' -exec chmod go-w {} \;
-sudo -Eu packager makedeb.impl
+sudo -EHu packager makedeb.impl
