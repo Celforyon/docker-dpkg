@@ -128,7 +128,7 @@ lintian_ok=$?
 chk_tmp=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
 chk_tmp_deb_file=${chk_tmp}/${deb_file}
 cp "${tmp_dest_deb_file}" "${chk_tmp_deb_file}" || die "${E_COMMAND_FAIL}" "cp '${tmp_dest_deb_file}' '${chk_tmp_deb_file}'"
-pushd "${chk_tmp}"
+pushd>/dev/null "${chk_tmp}" || die "${E_COMMAND_FAIL}" "pushd>/dev/null '${chk_tmp}'"
 
 dpkg -x "${deb_file}" out
 dpkg -e "${deb_file}" out/DEBIAN
@@ -136,7 +136,7 @@ dpkg -e "${deb_file}" out/DEBIAN
 allshellcheck out
 shellcheck_ok=$?
 
-popd
+popd>/dev/null
 rm -rf "${chk_tmp}"
 
 # Check failure?
