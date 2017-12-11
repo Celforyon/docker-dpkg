@@ -33,6 +33,8 @@ project_name=${PROJECT_NAME:-${CI_PROJECT_NAME}}
 distribution=${DIST}
 architecture=${ARCH}
 
+deploy=${DEPLOY:-1}
+
 # Required variables checks
 [ -z "${project_name}" ] && die "${E_MISSING_ARGUMENT}" 'missing project name (env CI_PROJECT_NAME or PROJECT_NAME)'
 [ -z "${distribution}" ] && die "${E_MISSING_ARGUMENT}" 'missing distribution codename (env DIST)'
@@ -147,10 +149,12 @@ fi
 
 #===== Deploy
 # Copy to /shared folder
-dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${distribution}
-dest_deb_file="${dest_dir}/${deb_file}"
-sudo mkdir "${dest_dir}" || die "${E_COMMAND_FAIL}" "sudo mkdir '${dest_dir}'"
-sudo cp "${tmp_dest_deb_file}" "${dest_deb_file}" || die "${E_COMMAND_FAIL}" "sudo cp '${tmp_dest_deb_file}' '${dest_deb_file}'"
-log_info "debian package copied to: ${dest_deb_file}"
+if [ "${deploy}" = "1" ]; then
+	dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${distribution}
+	dest_deb_file="${dest_dir}/${deb_file}"
+	sudo mkdir "${dest_dir}" || die "${E_COMMAND_FAIL}" "sudo mkdir '${dest_dir}'"
+	sudo cp "${tmp_dest_deb_file}" "${dest_deb_file}" || die "${E_COMMAND_FAIL}" "sudo cp '${tmp_dest_deb_file}' '${dest_deb_file}'"
+	log_info "debian package copied to: ${dest_deb_file}"
+fi
 
 exit 0

@@ -17,6 +17,7 @@ Contains a `makedeb` script to generate Debian packages from a specific architec
 - `VERBOSE`: outputs more information if set to "1"
 - `IGNORE_CHECKS`: set to "1" if you want failed checks to be ignored
 - `SHELLCHECK_EXCLUDE_CODES`: set to a comma separated list of `shellcheck` codes (e.g.: SC1009,SC2086) to ignore in shellcheck reporting. See `man shellcheck`
+- `DEPLOY`: set to 0 to disable the deployment (defaults to 1)
 
 ## root\_dir
 This is the project's root directory, which will be used to build the `.deb` file using `dpkg-deb`
