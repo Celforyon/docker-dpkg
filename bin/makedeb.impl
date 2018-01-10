@@ -16,7 +16,7 @@ die() {
 }
 
 log_info() {
-	[ "${VERBOSE}" = "1" ] && echo "[info] $*"
+	[ -z "${VERBOSE+x}" ] && echo "[info] $*"
 }
 
 log_error() {
@@ -122,29 +122,38 @@ fakeroot dpkg-deb -b "${root_dir}" "${tmp_dest_deb_file}" || die "${E_COMMAND_FA
 log_info "debian package generated: ${tmp_dest_deb_file}"
 
 #===== Checks
-# Check debian package
-lintian "${tmp_dest_deb_file}"
-lintian_ok=$?
+if [ -z "${SKIP_CHECKS+x}" ]; then
+	lintian_ok=0
+	shellcheck_ok=0
 
-# Check scripts
-chk_tmp=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
-chk_tmp_deb_file=${chk_tmp}/${deb_file}
-cp "${tmp_dest_deb_file}" "${chk_tmp_deb_file}" || die "${E_COMMAND_FAIL}" "cp '${tmp_dest_deb_file}' '${chk_tmp_deb_file}'"
-pushd>/dev/null "${chk_tmp}" || die "${E_COMMAND_FAIL}" "pushd>/dev/null '${chk_tmp}'"
+	if [ -z "${SKIP_CHECK_LINTIAN+x}" ]; then
+		# Check debian package
+		lintian "${tmp_dest_deb_file}"
+		lintian_ok=$?
+	fi
 
-dpkg -x "${deb_file}" out
-dpkg -e "${deb_file}" out/DEBIAN
+	if [ -z "${SKIP_CHECK_SHELL+x}" ]; then
+		# Check scripts
+		chk_tmp=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
+		chk_tmp_deb_file=${chk_tmp}/${deb_file}
+		cp "${tmp_dest_deb_file}" "${chk_tmp_deb_file}" || die "${E_COMMAND_FAIL}" "cp '${tmp_dest_deb_file}' '${chk_tmp_deb_file}'"
+		pushd>/dev/null "${chk_tmp}" || die "${E_COMMAND_FAIL}" "pushd>/dev/null '${chk_tmp}'"
 
-allshellcheck out
-shellcheck_ok=$?
+		dpkg -x "${deb_file}" out
+		dpkg -e "${deb_file}" out/DEBIAN
 
-popd>/dev/null
-rm -rf "${chk_tmp}"
+		allshellcheck out
+		shellcheck_ok=$?
 
-# Check failure?
-if [ "${IGNORE_CHECKS}" != "1" ]; then
-	[ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
-	[ "${shellcheck_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: shellcheck"
+		popd>/dev/null
+		rm -rf "${chk_tmp}"
+	fi
+
+	# Check failure?
+	if [ -z "${IGNORE_CHECKS+x}" ]; then
+		[ -z "${IGNORE_CHECK_LINTIAN+x}" ] && [ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
+		[ -z "${IGNORE_CHECK_SHELL+x}" ] && [ "${shellcheck_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: shellcheck"
+	fi
 fi
 
 #===== Deploy

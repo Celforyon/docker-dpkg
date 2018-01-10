@@ -1,7 +1,7 @@
 FROM debian:latest
 
 LABEL maintainer="Alexis Pereda <alexis@pereda.fr>"
-LABEL version="2.3"
+LABEL version="2.4"
 LABEL description="dpkg"
 
 RUN apt update && \

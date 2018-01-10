@@ -14,8 +14,13 @@ Contains a `makedeb` script to generate Debian packages from a specific architec
 - `DEPLOY_DIR`: the deploy directory, defaults to `deploy`
 - `PKG_ROOTDIR`: the package root directory (full path will be `${DEPLOY_DIR}/${PKG_ROOTDIR}`), defaults to `root_dir`
 - `INSTALL_FILE`: the "install" file (see below) (full path will be `${DEPLOY_DIR}/${INSTALL_FILE}`), defaults to `install`
-- `VERBOSE`: outputs more information if set to "1"
-- `IGNORE_CHECKS`: set to "1" if you want failed checks to be ignored
+- `VERBOSE`: outputs more information if set
+- `SKIP_CHECKS`: do not run any test if set
+- `SKIP_CHECK_LINTIAN`: do not run lintian if set
+- `SKIP_CHECK_SHELL`: do not run shellcheck if set
+- `IGNORE_CHECKS`: ignore any check failure if set
+- `IGNORE_CHECK_LINTIAN`: ignore lintian failure if set
+- `IGNORE_CHECK_SHELL`: ignore shellcheck failure if set
 - `SHELLCHECK_EXCLUDE_CODES`: set to a comma separated list of `shellcheck` codes (e.g.: SC1009,SC2086) to ignore in shellcheck reporting. See `man shellcheck`
 - `DEPLOY`: set to 0 to disable the deployment (defaults to 1)
 
