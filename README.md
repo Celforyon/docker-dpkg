@@ -30,8 +30,13 @@ This is the project's root directory, which will be used to build the `.deb` fil
 
 ### install file
 Each line of this file is read as:
-`source:destination`
+`source:destination:...`
 where `source` is the current file location (if relative, from the `makedeb` working directory, which is Git's root directory when running in GitLab CI) and `destination` is the *relative* destination path, from the package root directory
+The last part, `:...` is optional and should look like:
+`:script1:script2:...`
+where `script1`, `script2`, ... are shell command lines.
+The special `{}` token can be used and will be replaced by `destination`.
+All scripts are executed after the copy is done.
 
 ### version file
 This file must contain one line with the version identifier

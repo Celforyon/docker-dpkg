@@ -14,19 +14,25 @@ function process_install_file() {
 		i=0
 		while read -r line; do
 			i=$((i+1))
-			from=$(echo "${line}"|cut -d':' -f1)
-			to=$(echo "${line}"|cut -d':' -f2)
+			from=$(echo "${line}"|/usr/bin/cut -d':' -f1)
+			to=$(echo "${line}"|/usr/bin/cut -d':' -f2)
+			scripts=$(echo "${line}"|/usr/bin/cut -d':' -f3-):
 
 			if [ -n "${from}" ] && [ -n "${to}" ]; then
-				from_fc=$(echo "${from}"|cut -c1)
+				from_fc=$(echo "${from}"|/usr/bin/cut -c1)
 				[ "${from_fc}" != "/" ] && from=${G_GWD}/${from}
 
-				to_fc=$(echo "${to}"|cut -c1)
+				to_fc=$(echo "${to}"|/usr/bin/cut -c1)
 				[ "${to_fc}" != "/" ] && to=${G_ROOT_DIR}/${to} || to=${G_ROOT_DIR}${to}
 
 				to_dir=$(dirname "${to}")
 				[ -d "${to_dir}" ] || (mkdir -p "${to_dir}" || die "${E_COMMAND_FAIL}" "mkdir -p ${to_dir}")
-				cp -a "${from}" "${to}" || die "${E_COMMAND_FAIL}" "cp -a '${from}' '${to}'"
+				/bin/cp -a "${from}" "${to}" || die "${E_COMMAND_FAIL}" "cp -a '${from}' '${to}'"
+				while [ -n "${scripts}" ]; do
+					script=$(echo "${scripts}"|/usr/bin/cut -d':' -f1|sed -re "s:\{\}:${to}:g")
+					[ -n "${script}" ] && eval "${script}"
+					scripts=$(echo "${scripts}"|/usr/bin/cut -d':' -f2-)
+				done
 				log_info "installed '${from}' > '${to}'"
 			else
 				[ -z "${from}" ] && log_error "${G_INSTALL_FILE}:${i}: source file empty"
