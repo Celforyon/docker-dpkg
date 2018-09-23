@@ -2,12 +2,7 @@
 
 excludes="${SHELLCHECK_EXCLUDE_CODES:+-e}${SHELLCHECK_EXCLUDE_CODES}"
 
-if [ -r /usr/local/bin/empty ]; then
-	# shellcheck disable=SC2086
-	shellcheck $excludes /usr/local/bin/empty || exit 1
-fi
-
-is_shell() {
+function is_shell() {
 	exec 2>/dev/null
 	shell_list="sh|bash|dash|ksh"
 
@@ -18,7 +13,7 @@ is_shell() {
 		shabang=$(echo "${first_line}"|cut -c1,2)
 
 		if [ "${shabang}" = "#!" ]; then
-			if grep<<<"${first_line}" -Eq "${shell_list}"; then
+			if /bin/grep<<<"${first_line}" -Eq "/${shell_list}$"; then
 				echo "${file}"
 			fi
 		fi
@@ -27,13 +22,13 @@ is_shell() {
 export -f is_shell
 
 dir=${1:-.}
-shell_files=$(find "${dir}" ! -path '*/.git/*' -type f -exec bash -c 'is_shell "$0"' {} \;)
+shell_files=$(/usr/bin/find "${dir}" ! -path '*/.git/*' -type f -exec /bin/bash -c 'is_shell "$0"' {} \;)
 
 errcode=0
 if [ -n "${shell_files}" ]; then
 	# shellcheck disable=SC2086
-	shellcheck $excludes ${shell_files}
+	/usr/bin/shellcheck ${excludes} ${shell_files}
 	errcode=$?
 fi
 
-exit "$errcode"
+exit "${errcode}"

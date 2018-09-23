@@ -1,0 +1,8 @@
+#!/bin/bash
+
+function die() {
+	errcode=$1
+	shift
+	echo>&2 "[fatal error] $*"
+	exit "${errcode}"
+}

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+. /usr/local/bin/makedeb_log_info
+
+find_debian_dir() {
+	deploy_dist_arch_dir=${G_DEPLOY_DIR}/${G_DISTRIBUTION}/${G_ARCHITECTURE}/DEBIAN
+	deploy_dist_dir=${G_DEPLOY_DIR}/${G_DISTRIBUTION}/DEBIAN
+	deploy_dir=${G_DEPLOY_DIR}/DEBIAN
+
+	DEBIAN_DIR=${deploy_dist_arch_dir}
+	if [ -d "${DEBIAN_DIR}" ]; then
+		export DEBIAN_DIR
+		return
+	fi
+	log_info "no ${DEBIAN_DIR}"
+
+	DEBIAN_DIR=${deploy_dist_dir}
+	if [ -d "${DEBIAN_DIR}" ]; then
+		export DEBIAN_DIR
+		return
+	fi
+	log_info "no ${DEBIAN_DIR}"
+
+	DEBIAN_DIR=${deploy_dir}
+	if [ -d "${DEBIAN_DIR}" ]; then
+		export DEBIAN_DIR
+		return
+	fi
+	log_info "no ${DEBIAN_DIR}"
+
+	export DEBIAN_DIR=
+}

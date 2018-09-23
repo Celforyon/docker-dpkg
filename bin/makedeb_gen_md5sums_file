@@ -1,0 +1,17 @@
+#!/bin/bash
+
+. /usr/local/bin/makedeb_die
+
+function gen_md5sums() {
+	cd "${G_ROOT_DIR}" || die "${E_COMMAND_FAIL}" "cd '${G_ROOT_DIR}'"
+	files=$(/usr/bin/find ! -path './DEBIAN' ! -path './DEBIAN/*' -type f)
+
+	for file in ${files}; do
+		/usr/bin/md5sum "${file}"
+	done
+}
+
+function gen_md5sums_file() {
+	sums=$(gen_md5sums)
+	echo>"${G_ROOT_DIR}/DEBIAN/md5sums" "${sums}"
+}

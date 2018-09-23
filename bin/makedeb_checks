@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. /usr/local/bin/makedeb_die
+
+function checks() {
+	deb_file=$1
+	tmp_dest_deb_file=$2
+
+	if [ -z "${SKIP_CHECKS+x}" ]; then
+		lintian_ok=0
+		shellcheck_ok=0
+
+		if [ -z "${SKIP_CHECK_LINTIAN+x}" ]; then
+			# Check debian package
+			/usr/bin/lintian "${tmp_dest_deb_file}"
+			lintian_ok=$?
+		fi
+
+		if [ -z "${SKIP_CHECK_SHELL+x}" ]; then
+			# Check scripts
+			chk_tmp=$(mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
+			chk_tmp_deb_file=${chk_tmp}/${deb_file}
+			/bin/cp "${tmp_dest_deb_file}" "${chk_tmp_deb_file}" || die "${E_COMMAND_FAIL}" "cp '${tmp_dest_deb_file}' '${chk_tmp_deb_file}'"
+			pushd>/dev/null "${chk_tmp}" || die "${E_COMMAND_FAIL}" "pushd>/dev/null '${chk_tmp}'"
+
+			/usr/bin/dpkg -x "${deb_file}" out
+			/usr/bin/dpkg -e "${deb_file}" out/DEBIAN
+
+			/usr/local/bin/all_shellcheck out
+			shellcheck_ok=$?
+
+			popd>/dev/null
+			rm -rf "${chk_tmp}"
+		fi
+
+		# Check failure?
+		if [ -z "${IGNORE_CHECKS+x}" ]; then
+			[ -z "${IGNORE_CHECK_LINTIAN+x}" ] && [ "${lintian_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: lintian"
+			[ -z "${IGNORE_CHECK_SHELL+x}" ] && [ "${shellcheck_ok}" != "0" ] && die "${E_CHECK_FAIL}" "check failed: shellcheck"
+		fi
+	fi
+}

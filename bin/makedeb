@@ -1,5 +1,51 @@
 #!/bin/bash
 
-chown -R packager: .
-find ! -path './.git' ! -path './.git/*' -exec chmod go-w {} \;
-sudo -EHu packager makedeb.impl
+. /usr/local/bin/makedeb_die
+
+# Variables
+gwd=$(/bin/pwd)
+
+export E_MISSING_ARGUMENT=1
+export E_COMMAND_FAIL=2
+export E_MISSING_FILE=3
+export E_CHECK_FAIL=4
+
+export G_GWD=${gwd}
+export G_DEPLOY_DIR=${G_GWD}/${DEPLOY_DIR:-deploy}
+export G_ROOT_DIR=${G_GWD}/${PKG_ROOTDIR:-build/root_dir}
+
+export G_INSTALL_FILE=${G_DEPLOY_DIR}/${INSTALL_FILE:-install}
+export G_VERSION_FILE=${G_DEPLOY_DIR}/${VERSION_FILE:-version}
+export G_MAINTAINER_FILE=${G_DEPLOY_DIR}/${MAINTAINER_FILE:-maintainer}
+export G_SECTION_FILE=${G_DEPLOY_DIR}/${SECTION_FILE:-section}
+export G_PRIORITY_FILE=${G_DEPLOY_DIR}/${PRIORITY_FILE:-priority}
+export G_DESCRIPTION_FILE=${G_DEPLOY_DIR}/${DESCRIPTION_FILE:-description}
+
+version=$(cat "${G_VERSION_FILE}")
+maintainer=$(cat "${G_MAINTAINER_FILE}")
+section=$(cat "${G_SECTION_FILE}")
+priority=$(cat "${G_PRIORITY_FILE}")
+description=$(cat "${G_DESCRIPTION_FILE}")
+
+export G_PROJECT_NAME=${PROJECT_NAME:-${CI_PROJECT_NAME}}
+export G_DISTRIBUTION=${DIST}
+export G_ARCHITECTURE=${ARCH}
+
+export G_PACKAGE=${G_PROJECT_NAME}
+export G_VERSION=${version}
+export G_MAINTAINER=${maintainer}
+export G_SECTION=${section}
+export G_PRIORITY=${priority}
+export G_DESCRIPTION=${description}
+
+export G_DEPLOY=${DEPLOY:-1}
+
+# Required variables checks
+[ -z "${G_PROJECT_NAME}" ]  && die "${E_MISSING_ARGUMENT}" 'missing project name (env CI_PROJECT_NAME or PROJECT_NAME)'
+[ -z "${G_VERSION}" ]       && die "${E_MISSING_ARGUMENT}" 'missing version (in deploy/version)'
+[ -z "${G_DISTRIBUTION}" ]  && die "${E_MISSING_ARGUMENT}" 'missing distribution codename (env DIST)'
+[ -z "${G_ARCHITECTURE}" ]  && die "${E_MISSING_ARGUMENT}" 'missing architecture (env ARCH)'
+
+/bin/chown -R packager: .
+find ! -path './.git' ! -path './.git/*' -exec /bin/chmod go-w {} \;
+/usr/bin/sudo -EHu packager makedeb_impl

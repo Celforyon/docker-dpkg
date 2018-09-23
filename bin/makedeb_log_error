@@ -1,0 +1,5 @@
+#!/bin/bash
+
+function log_error() {
+	echo>&2 "[error] $*"
+}

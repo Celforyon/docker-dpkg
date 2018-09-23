@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function gen_control_file() {
+	size=$1
+
+	depends=$(/bin/grep -E '^Depends: ' "${G_ROOT_DIR}/DEBIAN/control"|/usr/bin/cut -d' ' -f2-)
+	breaks=$(/bin/grep -E '^Breaks: ' "${G_ROOT_DIR}/DEBIAN/control"|/usr/bin/cut -d' ' -f2-)
+
+/bin/cat>"${G_ROOT_DIR}/DEBIAN/control" <<EOF
+Package: ${G_PACKAGE}
+Version: ${G_VERSION}
+Architecture: ${G_ARCHITECTURE}
+Installed-Size: ${size}
+EOF
+if [ -n "${depends}" ]; then
+	echo>>"${G_ROOT_DIR}/DEBIAN/control" "Depends: ${depends}"
+fi
+if [ -n "${breaks}" ]; then
+	echo>>"${G_ROOT_DIR}/DEBIAN/control" "Breaks: ${breaks}"
+fi
+/bin/cat>>"${G_ROOT_DIR}/DEBIAN/control" <<EOF
+Maintainer: ${G_MAINTAINER}
+Section: ${G_SECTION}
+Priority: ${G_PRIORITY}
+Description: ${G_DESCRIPTION}
+EOF
+}

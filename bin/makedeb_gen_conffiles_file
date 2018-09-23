@@ -1,0 +1,8 @@
+#!/bin/bash
+
+function gen_conffiles_file() {
+	files=$(/usr/bin/find 2>/dev/null "${G_ROOT_DIR}/etc" -type f|/bin/sed "s,^${G_ROOT_DIR},,")
+	if [ -n "${files}" ]; then
+		echo>"${DEBIAN_DIR}/conffiles" "${files}"
+	fi
+}

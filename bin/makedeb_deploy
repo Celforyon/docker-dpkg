@@ -1,0 +1,17 @@
+#!/bin/bash
+
+. /usr/local/bin/makedeb_die
+. /usr/local/bin/makedeb_log_info
+
+function deploy() {
+	deb_file=$1
+	tmp_dest_deb_file=$2
+
+	if [ "${G_DEPLOY}" = "1" ]; then
+		dest_dir=$(sudo mktemp -dp /shared || die "${E_COMMAND_FAIL}" "sudo mktemp -dp /shared")/${G_DISTRIBUTION}
+		dest_deb_file="${dest_dir}/${deb_file}"
+		/usr/bin/sudo mkdir "${dest_dir}" || die "${E_COMMAND_FAIL}" "sudo mkdir '${dest_dir}'"
+		/usr/bin/sudo cp "${tmp_dest_deb_file}" "${dest_deb_file}" || die "${E_COMMAND_FAIL}" "sudo cp '${tmp_dest_deb_file}' '${dest_deb_file}'"
+		log_info "debian package copied to: ${dest_deb_file}"
+	fi
+}

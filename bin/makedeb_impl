@@ -1,0 +1,52 @@
+#!/bin/bash
+
+. /usr/local/bin/makedeb_checks
+. /usr/local/bin/makedeb_deploy
+. /usr/local/bin/makedeb_die
+. /usr/local/bin/makedeb_find_debian_dir
+. /usr/local/bin/makedeb_gen_conffiles_file
+. /usr/local/bin/makedeb_gen_control_file
+. /usr/local/bin/makedeb_gen_md5sums_file
+. /usr/local/bin/makedeb_log_info
+. /usr/local/bin/makedeb_process_install_file
+
+log_info "working directory: ${G_GWD}"
+
+[ ! -d "${G_ROOT_DIR}" ] && (/bin/mkdir -p "${G_ROOT_DIR}" || die "${E_COMMAND_FAIL}" "mkdir -p '${G_ROOT_DIR}'")
+
+# Find DEBIAN (exports DEBIAN_DIR)
+find_debian_dir
+
+[ -z "${DEBIAN_DIR}" ] && die "${E_MISSING_FILE}" 'DEBIAN directory not found'
+log_info "DEBIAN directory found at: ${DEBIAN_DIR}"
+
+# Process install file
+process_install_file "${G_ROOT_DIR}" "${G_INSTALL_FILE}" || die $? 'Failed to process "install" file'
+
+# Debian package generation
+size=$(/usr/bin/du -sx --exclude DEBIAN "${G_ROOT_DIR}"|/usr/bin/tr '\t' ' '|/usr/bin/cut -d' ' -f1)
+
+## DEBIAN directory
+/bin/cp -rf "${DEBIAN_DIR}" "${G_ROOT_DIR}"
+gen_control_file "${size}"
+gen_conffiles_file
+gen_md5sums_file
+
+deb_file="${G_PACKAGE}_${G_VERSION}_${G_DISTRIBUTION}_${G_ARCHITECTURE}.deb"
+
+log_info "$(echo -e "==== control file ====\n$(/bin/cat "${G_ROOT_DIR}/DEBIAN/control")")"
+log_info "======================"
+
+tmp_dest_dir=$(/bin/mktemp -d || die "${E_COMMAND_FAIL}" "mktemp -d")
+tmp_dest_deb_file="${tmp_dest_dir}/${deb_file}"
+/usr/bin/fakeroot /usr/bin/dpkg-deb -b "${G_ROOT_DIR}" "${tmp_dest_deb_file}" || die "${E_COMMAND_FAIL}" "fakeroot dpkg-deb -b '${G_ROOT_DIR}' '${tmp_dest_deb_file}'"
+log_info "debian package generated: ${tmp_dest_deb_file}"
+
+#===== Checks
+checks "${deb_file}" "${tmp_dest_deb_file}"
+
+#===== Deploy
+# Copy to /shared folder
+deploy "${deb_file}" "${tmp_dest_deb_file}"
+
+exit 0
